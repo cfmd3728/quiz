@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>雑学アプリ（1問ずつ表示・結果付き）</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      margin: 5px 0;
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .feedback {
+      position: fixed;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .correct {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .wrong {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(10px);
+    }
+
+    .choice-btn {
+      display: block;
+      width: fit-content;
+    }
+
+    .highlight-correct {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .highlight-wrong {
+      background-color: #f44336;
+      color: white;
+    }
+
+    #next-btn, #retry-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #result {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>雑学アプリ</h1> <!-- ここにタイトルを追加 -->
+  <div id="quiz-container"></div>
+  <div id="feedback" class="feedback"></div>
+  <div id="result"></div>
+  <button id="next-btn" style="display:none;">次の問題へ</button>
+  <button id="retry-btn" style="display:none;" onclick="location.reload()">もう一度やる</button>
+
+  <script>
+    fetch("quizzes.json")
+      .then(response => response.json())
+      .then(quizzes => {
+        const shuffled = quizzes.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 5);
+
+        const container = document.getElementById("quiz-container");
+        const feedback = document.getElementById("feedback");
+        const result = document.getElementById("result");
+        const nextBtn = document.getElementById("next-btn");
+        const retryBtn = document.getElementById("retry-btn");
+
+        let currentIndex = 0;
+        let correctCount = 0;
+
+        function showFeedback(message, isCorrect) {
+          feedback.textContent = message;
+          feedback.className = "feedback " + (isCorrect ? "correct" : "wrong") + " show";
+          setTimeout(() => {
+            feedback.classList.remove("show");
+          }, 1000);
+        }
+
+        function showQuestion() {
+          container.innerHTML = ""; // 前の問題を消す
+          nextBtn.style.display = "none";
+
+          const quiz = selected[currentIndex];
+
+          const questionEl = document.createElement("h2");
+          questionEl.textContent = `Q${currentIndex + 1}: ${quiz.question}`;
+          container.appendChild(questionEl);
+
+          quiz.choices.forEach((choice, index) => {
+            const button = document.createElement("button");
+            button.textContent = choice;
+            button.className = "choice-btn";
+            button.onclick = () => {
+              const isCorrect = index === quiz.answer;
+              if (isCorrect) correctCount++;
+
+              showFeedback(isCorrect ? "正解！🎉" : "不正解…😢", isCorrect);
+
+              // 全ボタン無効化 & 正誤ハイライト
+              const allButtons = document.querySelectorAll(".choice-btn");
+              allButtons.forEach((btn, i) => {
+                btn.disabled = true;
+                if (i === quiz.answer) {
+                  btn.classList.add("highlight-correct");
+                } else if (i === index) {
+                  btn.classList.add("highlight-wrong");
+                }
+              });
+
+              // 次へボタン表示
+              nextBtn.style.display = "inline-block";
+            };
+            container.appendChild(button);
+          });
+        }
+
+        nextBtn.onclick = () => {
+          currentIndex++;
+          if (currentIndex < selected.length) {
+            showQuestion();
+          } else {
+            container.innerHTML = "";
+            nextBtn.style.display = "none";
+            result.textContent = `あなたは ${selected.length}問中 ${correctCount}問 正解しました！`;
+            retryBtn.style.display = "inline-block";
+          }
+        };
+
+        // 最初の問題表示
+        showQuestion();
+      });
+  </script>
+</body>
+</html>
